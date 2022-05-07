@@ -1,15 +1,15 @@
-expname = lego_batch
+expname = blender_big_lego
 basedir = ./logs
 datadir = ./data/nerf_synthetic/lego
 dataset_type = blender
 
-no_batching = False
+no_batching = True
 
 use_viewdirs = True
 white_bkgd = True
 lrate_decay = 500
 
-N_samples = 32
+N_samples = 100
 N_importance = 128
 N_rand = 1024
 
