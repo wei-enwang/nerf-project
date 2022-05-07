@@ -1,9 +1,9 @@
-expname = lego_batch
+expname = blender_small_lego
 basedir = ./logs
 datadir = ./data/nerf_synthetic/lego
 dataset_type = blender
 
-no_batching = False
+no_batching = True
 
 use_viewdirs = True
 white_bkgd = True
