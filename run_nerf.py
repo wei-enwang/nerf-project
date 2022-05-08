@@ -368,7 +368,7 @@ def render_rays(ray_batch,
         t_vals = torch.linspace(0., 1., steps=N_samples)
     elif sample_strats == 'rand':
         t_vals = torch.rand(N_samples+1)
-        t_vals = torch.cumsum(t_vals)
+        t_vals = torch.cumsum(t_vals, dim=0)
         t_vals = (t_vals/t_vals[-1])[:-1]
     else:
         print('Unknown sampling strategy', sample_strats, 'aborting')
