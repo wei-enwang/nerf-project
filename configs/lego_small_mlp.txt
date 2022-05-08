@@ -18,9 +18,7 @@ precrop_frac = 0.5
 
 half_res = True
 
+big_mlp = True
+netwidth=128
+netdepth=7
 i_testset = 10000
-big_mlp = False
-N_mlps = 32
-
-netdepth_fine = 4
-netwidth_fine = 8
