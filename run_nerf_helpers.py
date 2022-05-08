@@ -166,9 +166,13 @@ class NeRF(nn.Module):
 class NeRF_fine(nn.Module):
     def __init__(self, num_mlp=32, D=4, W=8, input_ch=3, input_ch_views=3, output_ch=4, skips=[4], use_viewdirs=False):
         super().__init__()
+        self.use_viewdirs = use_viewdirs
         self.mlps = nn.ModuleList([NeRF(D=D, W=W, input_ch=input_ch, input_ch_views=input_ch_views,
                                         output_ch = output_ch, skips=skips, use_viewdirs=use_viewdirs) for _ in range(num_mlp)])
-        self.out_linear = nn.Linear(num_mlp*output_ch, output_ch)
+        if use_viewdirs:
+            self.out_linear = nn.Linear(num_mlp*4, 4)
+        else:
+            self.out_linear = nn.Linear(num_mlp*output_ch, output_ch)
     
     def forward(self, x):
         mlp_out = [mlp(x) for mlp in self.mlps]
