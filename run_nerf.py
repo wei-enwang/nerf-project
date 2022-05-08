@@ -487,7 +487,7 @@ def config_parser():
                         help='sampling strategy for calculating integral')
     parser.add_argument("--N_importance", type=int, default=0,
                         help='number of additional fine samples per ray')
-    parser.add_argument("--big_mlp", action='store_true',
+    parser.add_argument("--big_mlp", action='store_false',
                         help='set this to false to use small mlps for rendering fine structure')
     parser.add_argument("--N_mlps", type=int, default=32,
                         help='number of small mlps for rendering fine structure')
@@ -544,7 +544,7 @@ def config_parser():
                         help='set for spherical 360 scenes')
     parser.add_argument("--llffhold", type=int, default=8, 
                         help='will take every 1/N images as LLFF test set, paper uses 8')
-    parser.add_argument("--no_depth", action='store_true',
+    parser.add_argument("--no_depth", action='store_false',
                         help='set this to False to enable depth data')
 
     # logging/saving options
