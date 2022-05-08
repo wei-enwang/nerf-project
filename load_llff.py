@@ -1,6 +1,8 @@
 import numpy as np
 import os, imageio
-
+from pathlib import Path
+from colmap_utils.read_write_model import *
+from colmap_utils.read_write_dense import *
 
 ########## Slightly modified version of LLFF data loading code 
 ##########  see https://github.com/Fyusion/LLFF for original
@@ -115,12 +117,8 @@ def _load_data(basedir, factor=None, width=None, height=None, load_imgs=True):
     imgs = np.stack(imgs, -1)  
     
     print('Loaded image data', imgs.shape, poses[:,-1,0])
-    return poses, bds, imgs
+    return poses, bds, imgs  
 
-    
-            
-            
-    
 
 def normalize(x):
     return x / np.linalg.norm(x)
@@ -149,7 +147,6 @@ def poses_avg(poses):
     return c2w
 
 
-
 def render_path_spiral(c2w, up, rads, focal, zdelta, zrate, rots, N):
     render_poses = []
     rads = np.array(list(rads) + [1.])
@@ -161,7 +158,6 @@ def render_path_spiral(c2w, up, rads, focal, zdelta, zrate, rots, N):
         render_poses.append(np.concatenate([viewmatrix(z, up, c), hwf], 1))
     return render_poses
     
-
 
 def recenter_poses(poses):
 
@@ -316,4 +312,63 @@ def load_llff_data(basedir, factor=8, recenter=True, bd_factor=.75, spherify=Fal
     return images, poses, bds, render_poses, i_test
 
 
+def get_poses(images):
+    poses = []
+    for i in images:
+        R = images[i].qvec2rotmat()
+        t = images[i].tvec.reshape([3,1])
+        bottom = np.array([0,0,0,1.]).reshape([1,4])
+        w2c = np.concatenate([np.concatenate([R, t], 1), bottom], 0)
+        c2w = np.linalg.inv(w2c)
+        poses.append(c2w)
+    return np.array(poses)
 
+
+def load_colmap_depth(basedir, factor=8, bd_factor=.75):
+    data_file = Path(basedir) / 'colmap_depth.npy'
+    
+    images = read_images_binary(Path(basedir) / 'sparse' / '0' / 'images.bin')
+    points = read_points3d_binary(Path(basedir) / 'sparse' / '0' / 'points3D.bin')
+
+    Errs = np.array([point3D.error for point3D in points.values()])
+    Err_mean = np.mean(Errs)
+    print("Mean Projection Error:", Err_mean)
+    
+    poses = get_poses(images)
+    _, bds_raw, _ = _load_data(basedir, factor=factor) # factor=8 downsamples original imgs by 8x
+    bds_raw = np.moveaxis(bds_raw, -1, 0).astype(np.float32)
+    # print(bds_raw.shape)
+    # Rescale if bd_factor is provided
+    sc = 1. if bd_factor is None else 1./(bds_raw.min() * bd_factor)
+    
+    near = np.ndarray.min(bds_raw) * .9 * sc
+    far = np.ndarray.max(bds_raw) * 1. * sc
+    print('near/far:', near, far)
+
+    data_list = []
+    for id_im in range(1, len(images)+1):
+        depth_list = []
+        coord_list = []
+        weight_list = []
+        for i in range(len(images[id_im].xys)):
+            point2D = images[id_im].xys[i]
+            id_3D = images[id_im].point3D_ids[i]
+            if id_3D == -1:
+                continue
+            point3D = points[id_3D].xyz
+            depth = (poses[id_im-1,:3,2].T @ (point3D - poses[id_im-1,:3,3])) * sc
+            if depth < bds_raw[id_im-1,0] * sc or depth > bds_raw[id_im-1,1] * sc:
+                continue
+            err = points[id_3D].error
+            weight = 2 * np.exp(-(err/Err_mean)**2)
+            depth_list.append(depth)
+            coord_list.append(point2D/factor)
+            weight_list.append(weight)
+        if len(depth_list) > 0:
+            print(id_im, len(depth_list), np.min(depth_list), np.max(depth_list), np.mean(depth_list))
+            data_list.append({"depth":np.array(depth_list), "coord":np.array(coord_list), "weight":np.array(weight_list)})
+        else:
+            print(id_im, len(depth_list))
+    # json.dump(data_list, open(data_file, "w"))
+    np.save(data_file, data_list)
+    return data_list
