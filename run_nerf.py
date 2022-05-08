@@ -202,7 +202,7 @@ def create_nerf(args):
     if args.N_importance > 0:
         model_fine = NeRF(D=args.netdepth_fine, W=args.netwidth_fine,
                           input_ch=input_ch, output_ch=output_ch, skips=skips,
-                          input_ch_views=input_ch_views, use_viewdirs=args.use_viewdirs).to(device)
+                          input_ch_views=input_ch_views, use_viewdirs=args.use_viewdirs)
         model_fine = nn.DataParallel(model_fine).to(device)
         grad_vars += list(model_fine.parameters())
 
@@ -248,6 +248,7 @@ def create_nerf(args):
         'N_importance' : args.N_importance,
         'network_fine' : model_fine,
         'N_samples' : args.N_samples,
+        'sample_strats' : args.sample_strats,
         'network_fn' : model,
         'use_viewdirs' : args.use_viewdirs,
         'white_bkgd' : args.white_bkgd,
@@ -319,6 +320,7 @@ def render_rays(ray_batch,
                 N_samples,
                 retraw=False,
                 lindisp=False,
+                sample_strats='lin',
                 perturb=0.,
                 N_importance=0,
                 network_fine=None,
@@ -362,12 +364,20 @@ def render_rays(ray_batch,
     bounds = torch.reshape(ray_batch[...,6:8], [-1,1,2])
     near, far = bounds[...,0], bounds[...,1] # [-1,1]
 
-    t_vals = torch.linspace(0., 1., steps=N_samples)
+    if sample_strats == 'lin':
+        t_vals = torch.linspace(0., 1., steps=N_samples)
+    elif sample_strats == 'rand':
+        t_vals = torch.rand(N_samples+1)
+        t_vals = torch.cumsum(t_vals)
+        t_vals = (t_vals/t_vals[-1])[:-1]
+    else:
+        print('Unknown sampling strategy', sample_strats, 'aborting')
+        return
+
     if not lindisp:
         z_vals = near * (1.-t_vals) + far * (t_vals)
     else:
         z_vals = 1./(1./near * (1.-t_vals) + 1./far * (t_vals))
-
     z_vals = z_vals.expand([N_rays, N_samples])
 
     if perturb > 0.:
@@ -468,6 +478,8 @@ def config_parser():
     # rendering options
     parser.add_argument("--N_samples", type=int, default=64, 
                         help='number of coarse samples per ray')
+    parser.add_argument("--sample_strats", type=str, default='lin',
+                        help='sampling strategy for calculating integral')
     parser.add_argument("--N_importance", type=int, default=0,
                         help='number of additional fine samples per ray')
     parser.add_argument("--perturb", type=float, default=1.,
@@ -829,7 +841,10 @@ def train():
             print('test poses shape', poses[i_test].shape)
             with torch.no_grad():
                 render_path(torch.Tensor(poses[i_test]).to(device), hwf, K, args.chunk, render_kwargs_test, gt_imgs=images[i_test], savedir=testsavedir)
+                test_loss = img2mse(torch.Tensor(rgbs), images[i_test])
+                test_psnr = mse2psnr(test_loss)
             print('Saved test set')
+            tqdm.write(f"[TEST] Iter: {i} Loss: {test_loss.item()}  PSNR: {test_psnr.item()}")
 
 
     
