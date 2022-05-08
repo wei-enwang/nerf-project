@@ -480,6 +480,8 @@ def config_parser():
                         help='do not reload weights from saved ckpt')
     parser.add_argument("--ft_path", type=str, default=None, 
                         help='specific weights npy file to reload for coarse network')
+    parser.add_argument("--set_imgs", action='store_true')
+    parser.add_argument("--N_imgs", type=int, default=10)
 
     # rendering options
     parser.add_argument("--N_samples", type=int, default=64, 
@@ -582,13 +584,19 @@ def train():
         if not isinstance(i_test, list):
             i_test = [i_test]
 
-        if args.llffhold > 0:
-            print('Auto LLFF holdout,', args.llffhold)
-            i_test = np.arange(images.shape[0])[::args.llffhold]
+        if args.set_imgs and args.N_imgs > 0:
+            i_train = np.random.choice(images.shape[0], args.N_imgs, replace=False)
+            i_test = np.array([i for i in np.arange(int(images.shape[0])) if
+                            (i not in i_train)])
+            i_val = i_test
+        else:    
+            if args.llffhold > 0:
+                print('Auto LLFF holdout,', args.llffhold)
+                i_test = np.arange(images.shape[0])[::args.llffhold]
 
-        i_val = i_test
-        i_train = np.array([i for i in np.arange(int(images.shape[0])) if
-                        (i not in i_test and i not in i_val)])
+            i_val = i_test
+            i_train = np.array([i for i in np.arange(int(images.shape[0])) if
+                            (i not in i_test and i not in i_val)])
 
         print('DEFINING BOUNDS')
         if args.no_ndc:
@@ -603,7 +611,13 @@ def train():
     elif args.dataset_type == 'blender':
         images, poses, render_poses, hwf, i_split = load_blender_data(args.datadir, args.half_res, args.testskip)
         print('Loaded blender', images.shape, render_poses.shape, hwf, args.datadir)
-        i_train, i_val, i_test = i_split
+        if args.set_imgs and args.N_imgs > 0:
+            i_train = np.random.choice(images.shape[0], args.N_imgs, replace=False)
+            i_test = np.array([i for i in np.arange(int(images.shape[0])) if
+                            (i not in i_train)])
+            i_val = i_test
+        else:           
+            i_train, i_val, i_test = i_split
 
         near = 2.
         far = 6.
