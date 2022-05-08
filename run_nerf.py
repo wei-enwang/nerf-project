@@ -170,10 +170,6 @@ def render_path(render_poses, hwf, K, chunk, render_kwargs, gt_imgs=None, savedi
             rgb8[np.isnan(rgb8)] = 0
             filename = os.path.join(savedir, '{:03d}.png'.format(i))
             imageio.imwrite(filename, rgb8)
-            depth = depth.cpu().numpy()
-            print("max:", np.nanmax(depth))
-            imageio.imwrite(os.path.join(savedir, '{:03d}_depth.png'.format(i)), depth)
-            np.savez(os.path.join(savedir, '{:03d}.npz'.format(i)), rgb=rgb.cpu().numpy(), disp=disp.cpu().numpy(), acc=acc.cpu().numpy(), depth=depth)
 
     rgbs = np.stack(rgbs, 0)
     disps = np.stack(disps, 0)
