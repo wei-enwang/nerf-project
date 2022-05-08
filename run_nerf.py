@@ -195,10 +195,16 @@ def create_nerf(args):
     grad_vars = list(model.parameters())
 
     model_fine = None
+    use_small_mlp = not args.big_mlp
     if args.N_importance > 0:
-        model_fine = NeRF(D=args.netdepth_fine, W=args.netwidth_fine,
-                          input_ch=input_ch, output_ch=output_ch, skips=skips,
-                          input_ch_views=input_ch_views, use_viewdirs=args.use_viewdirs)
+        if use_small_mlp:
+            model_fine = NeRF_fine(num_mlp=args.N_mlps, D=args.netdepth_fine, W=args.netwidth_fine,
+                                   input_ch=input_ch, output_ch=output_ch, skips=skips,
+                                   input_ch_views=input_ch_views, use_viewdirs=args.use_viewdirs)
+        else:
+            model_fine = NeRF(D=args.netdepth_fine, W=args.netwidth_fine,
+                            input_ch=input_ch, output_ch=output_ch, skips=skips,
+                            input_ch_views=input_ch_views, use_viewdirs=args.use_viewdirs)
         model_fine = nn.DataParallel(model_fine).to(device)
         grad_vars += list(model_fine.parameters())
 
@@ -315,6 +321,7 @@ def render_rays(ray_batch,
                 network_query_fn,
                 N_samples,
                 retraw=False,
+                retdepth=False,
                 lindisp=False,
                 sample_strats='lin',
                 perturb=0.,
@@ -322,7 +329,6 @@ def render_rays(ray_batch,
                 network_fine=None,
                 white_bkgd=False,
                 raw_noise_std=0.,
-                verbose=False,
                 pytest=False):
     """Volumetric rendering.
     Args:
@@ -342,7 +348,6 @@ def render_rays(ray_batch,
       network_fine: "fine" network with same spec as network_fn.
       white_bkgd: bool. If True, assume a white background.
       raw_noise_std: ...
-      verbose: bool. If True, print more debugging info.
     Returns:
       rgb_map: [num_rays, 3]. Estimated RGB color of a ray. Comes from fine model.
       disp_map: [num_rays]. Disparity map. 1 / depth.
@@ -401,7 +406,7 @@ def render_rays(ray_batch,
 
     if N_importance > 0:
 
-        rgb_map_0, disp_map_0, acc_map_0 = rgb_map, disp_map, acc_map
+        rgb_map_0, disp_map_0, acc_map_0, depth_map_0 = rgb_map, disp_map, acc_map, depth_map
 
         z_vals_mid = .5 * (z_vals[...,1:] + z_vals[...,:-1])
         z_samples = sample_pdf(z_vals_mid, weights[...,1:-1], N_importance, det=(perturb==0.), pytest=pytest)
@@ -419,11 +424,15 @@ def render_rays(ray_batch,
     ret = {'rgb_map' : rgb_map, 'disp_map' : disp_map, 'acc_map' : acc_map}
     if retraw:
         ret['raw'] = raw
+    if retdepth:
+        ret['depth_map'] = depth_map
     if N_importance > 0:
         ret['rgb0'] = rgb_map_0
         ret['disp0'] = disp_map_0
         ret['acc0'] = acc_map_0
         ret['z_std'] = torch.std(z_samples, dim=-1, unbiased=False)  # [N_rays]
+        if retdepth:
+            ret['depth0'] = depth_map_0
 
     for k in ret:
         if (torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any()) and DEBUG:
@@ -478,6 +487,10 @@ def config_parser():
                         help='sampling strategy for calculating integral')
     parser.add_argument("--N_importance", type=int, default=0,
                         help='number of additional fine samples per ray')
+    parser.add_argument("--big_mlp", action='store_true',
+                        help='set this to false to use small mlps for rendering fine structure')
+    parser.add_argument("--N_mlps", type=int, default=32,
+                        help='number of small mlps for rendering fine structure')
     parser.add_argument("--perturb", type=float, default=1.,
                         help='set to 0. for no jitter, 1. for jitter')
     parser.add_argument("--use_viewdirs", action='store_true', 
@@ -531,6 +544,8 @@ def config_parser():
                         help='set for spherical 360 scenes')
     parser.add_argument("--llffhold", type=int, default=8, 
                         help='will take every 1/N images as LLFF test set, paper uses 8')
+    parser.add_argument("--no_depth", action='store_true',
+                        help='set this to False to enable depth data')
 
     # logging/saving options
     parser.add_argument("--i_print",   type=int, default=100, 

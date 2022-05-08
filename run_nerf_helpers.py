@@ -1,3 +1,4 @@
+from turtle import forward
 import torch
 # torch.autograd.set_detect_anomaly(True)
 import torch.nn as nn
@@ -23,7 +24,7 @@ class RayDataset(data.Dataset):
         return self.length
 
     def __getitem__(self, index):
-        return torch.Tensor(self.rayData[index]);
+        return torch.Tensor(self.rayData[index])
         
 # Positional encoding (section 5.1)
 class Embedder:
@@ -160,6 +161,19 @@ class NeRF(nn.Module):
         idx_alpha_linear = 2 * self.D + 6
         self.alpha_linear.weight.data = torch.from_numpy(np.transpose(weights[idx_alpha_linear]))
         self.alpha_linear.bias.data = torch.from_numpy(np.transpose(weights[idx_alpha_linear+1]))
+
+
+class NeRF_fine(nn.Module):
+    def __init__(self, num_mlp=32, D=4, W=8, input_ch=3, input_ch_views=3, output_ch=4, skips=[4], use_viewdirs=False):
+        super().__init__()
+        self.mlps = nn.ModuleList([NeRF(D,W,input_ch,input_ch_views,output_ch,skips,use_viewdirs) for _ in range(num_mlp)])
+        self.out_linear = nn.Linear(num_mlp*output_ch, output_ch)
+    
+    def forward(self, x):
+        mlp_out = [mlp(x) for mlp in self.mlps]
+        mlp_out = torch.stack(mlp_out, dim=-1)
+        output = self.out_linear(mlp_out)
+        return output
 
 
 class NeRF_RGB(NeRF):
