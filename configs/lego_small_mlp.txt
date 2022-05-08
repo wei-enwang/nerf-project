@@ -18,7 +18,8 @@ precrop_frac = 0.5
 
 half_res = True
 
-big_mlp = True
-netwidth=128
-netdepth=7
+netwidth=200
+netdepth=6
+lrate=8e-4
+sample_strats = rand
 i_testset = 10000

@@ -14,4 +14,3 @@ use_viewdirs = True
 raw_noise_std = 1e0
 
 sample_strats = rand
-i_testset = 10000
