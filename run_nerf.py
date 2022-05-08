@@ -878,7 +878,7 @@ def train():
 
         global_step += 1
 
-    fig, (ax1, ax2) = plt.subplots()
+    fig, (ax1, ax2) = plt.subplots(1,2)
     ax1.plot(train_it, train_loss, label='training')
     ax1.plot(val_it, val_loss, label='testing')
     ax1.set_title('loss')
