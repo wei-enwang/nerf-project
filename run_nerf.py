@@ -701,6 +701,9 @@ def train():
             rgbs, _ = render_path(render_poses, hwf, K, args.chunk, render_kwargs_test, gt_imgs=images, savedir=testsavedir, render_factor=args.render_factor)
             print('Done rendering', testsavedir)
             imageio.mimwrite(os.path.join(testsavedir, 'video.mp4'), to8b(rgbs), fps=30, quality=8)
+            test_loss = img2mse(torch.Tensor(rgbs).to(device), torch.Tensor(images[i_test]).to(device))
+            test_psnr = mse2psnr(test_loss)
+            print(f"[TEST] Loss: {test_loss.item()}  PSNR: {test_psnr.item()}")
 
             return
 
@@ -737,7 +740,13 @@ def train():
     print('TEST views are', i_test)
     print('VAL views are', i_val)
 
-    
+    train_it = []
+    val_it = []
+    train_loss = []
+    val_loss = []
+    train_psnr = []
+    val_psnr = []
+
     start = start + 1
     for i in trange(start, N_iters):
         time0 = time.time()
@@ -854,14 +863,34 @@ def train():
                 test_loss = img2mse(torch.Tensor(rgbs).to(device), torch.Tensor(images[i_test]).to(device))
                 test_psnr = mse2psnr(test_loss)
             print('Saved test set')
+            val_it.append(i)
+            val_loss.append(test_loss.item())
+            val_psnr.append(test_psnr.item())
             tqdm.write(f"[TEST] Iter: {i} Loss: {test_loss.item()}  PSNR: {test_psnr.item()}")
 
 
-    
         if i%args.i_print==0:
+            train_it.append(i)
+            train_loss.append(loss.item())
+            train_psnr.append(psnr.item())
             tqdm.write(f"[TRAIN] Iter: {i} Loss: {loss.item()}  PSNR: {psnr.item()}")
 
         global_step += 1
+
+    fig, (ax1, ax2) = plt.subplots()
+    ax1.plot(train_it, train_loss, label='training')
+    ax1.plot(val_it, val_loss, label='testing')
+    ax1.set_title('loss')
+    ax1.set_xlabel('Iters')
+
+    ax2.plot(train_it, train_psnr, label='training')
+    ax2.plot(val_it, val_psnr, label='testing')
+    ax2.set_title('PSNR')
+    ax2.set_xlabel('Iters')
+
+    plt.legend()
+    plot_name = os.path.join(basedir, expname, 'loss&psnr.png')
+    plt.savefig(plot_name)
 
 
 if __name__=='__main__':
