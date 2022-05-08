@@ -1,4 +1,4 @@
-expname = fern_fast
+expname = fern_d4_rand
 basedir = ./logs
 datadir = ./data/nerf_llff_data/fern
 dataset_type = llff
