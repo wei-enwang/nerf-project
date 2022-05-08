@@ -1,0 +1,26 @@
+expname = lego_d6_rand
+basedir = ./logs
+datadir = ./data/nerf_synthetic/lego
+dataset_type = blender
+
+no_batching = True
+
+use_viewdirs = True
+white_bkgd = True
+lrate_decay = 500
+
+N_iter = 100000
+N_samples = 64
+N_importance = 128
+N_rand = 1024
+
+precrop_iters = 500
+precrop_frac = 0.5
+
+half_res = True
+
+netwidth=200
+netdepth=6
+lrate=8e-4
+sample_strats = rand
+i_testset = 10000
