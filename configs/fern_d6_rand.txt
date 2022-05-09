@@ -1,4 +1,4 @@
-expname = fern_d4_lin
+expname = fern_d6_rand
 basedir = ./logs
 datadir = ./data/nerf_llff_data/fern
 dataset_type = llff
@@ -11,15 +11,11 @@ N_rand = 1024
 N_samples = 64
 N_importance = 64
 
-sample_strats = lin
+sample_strats = rand
 
 use_viewdirs = True
 raw_noise_std = 1e0
 
-i_testset = 20000
-netwidth = 100
-netdepth = 4
-
-set_imgs = True
-N_imgs = 10
-render_test = True
+i_testset = 10000
+netwidth = 200
+netdepth = 6

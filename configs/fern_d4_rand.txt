@@ -16,6 +16,10 @@ sample_strats = rand
 use_viewdirs = True
 raw_noise_std = 1e0
 
-i_testset = 10000
-netwidth = 200
-netdepth = 6
+i_testset = 20000
+netwidth = 100
+netdepth = 4
+
+set_imgs = True
+N_imgs = 10
+render_test = True
