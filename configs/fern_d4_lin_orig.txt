@@ -1,0 +1,21 @@
+expname = fern_d4_lin_orig
+basedir = ./logs
+datadir = ./data/nerf_llff_data/fern
+dataset_type = llff
+
+factor = 8
+llffhold = 8
+
+N_iter = 100000
+N_rand = 1024
+N_samples = 64
+N_importance = 64
+
+sample_strats = lin
+
+use_viewdirs = True
+raw_noise_std = 1e0
+
+i_testset = 20000
+netwidth = 100
+netdepth = 4
