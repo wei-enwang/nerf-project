@@ -1,4 +1,3 @@
-from turtle import forward
 import torch
 # torch.autograd.set_detect_anomaly(True)
 import torch.nn as nn
@@ -11,6 +10,17 @@ import numpy as np
 img2mse = lambda x, y : torch.mean((x - y) ** 2)
 mse2psnr = lambda x : -10. * torch.log(x) / torch.log(torch.Tensor([10.]))
 to8b = lambda x : (255*np.clip(x,0,1)).astype(np.uint8)
+
+def img2ssim(x, y):
+    mux = torch.mean(x)
+    muy = torch.mean(y)
+    varx = torch.var(x)
+    vary = torch.var(y)
+    c1 = (0.01*255)**2
+    c2 = (0.03*255)**2
+    cov = torch.mean((x-mux)*(y-muy))
+
+    return (2*mux*muy+c1)*(2*cov+c2)/((mux**2+muy**2+c1)*(varx+vary+c2))
 
 
 class RayDataset(data.Dataset):
