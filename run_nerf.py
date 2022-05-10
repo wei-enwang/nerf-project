@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm, trange
+from skimage.metrics import structural_similarity as ssim
 
 import matplotlib.pyplot as plt
 
@@ -714,7 +715,8 @@ def train():
             imageio.mimwrite(os.path.join(testsavedir, 'video.mp4'), to8b(rgbs), fps=30, quality=8)
             test_loss = img2mse(torch.Tensor(rgbs).to(device), torch.Tensor(images).to(device))
             test_psnr = mse2psnr(test_loss)
-            test_ssim = img2ssim(torch.Tensor(rgbs).to(device), torch.Tensor(images).to(device))
+            test_ssim = ssim(rgbs, images, images.max()-images.min())
+            img2ssim(torch.Tensor(rgbs).to(device), torch.Tensor(images).to(device))
             print(f"[TEST] Loss: {test_loss.item()}  PSNR: {test_psnr.item()}, SSIM: {test_ssim.item()}")
 
             return
