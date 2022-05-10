@@ -712,9 +712,10 @@ def train():
             rgbs, _ = render_path(render_poses, hwf, K, args.chunk, render_kwargs_test, gt_imgs=images, savedir=testsavedir, render_factor=args.render_factor)
             print('Done rendering', testsavedir)
             imageio.mimwrite(os.path.join(testsavedir, 'video.mp4'), to8b(rgbs), fps=30, quality=8)
-            test_loss = img2mse(torch.Tensor(rgbs).to(device), torch.Tensor(images[i_test]).to(device))
+            test_loss = img2mse(torch.Tensor(rgbs).to(device), torch.Tensor(images).to(device))
             test_psnr = mse2psnr(test_loss)
-            print(f"[TEST] Loss: {test_loss.item()}  PSNR: {test_psnr.item()}")
+            test_ssim = img2ssim(torch.Tensor(rgbs).to(device), torch.Tensor(images).to(device))
+            print(f"[TEST] Loss: {test_loss.item()}  PSNR: {test_psnr.item()}, SSIM: {test_ssim.item()}")
 
             return
 
